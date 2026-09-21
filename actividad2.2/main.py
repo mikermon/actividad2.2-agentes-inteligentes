@@ -29,20 +29,29 @@ def buscar_agente(entorno):
                 return i, j
     return None  # Si no se encuentra a 'A'
 # PERCIBIR
-def percibir(entorno,fila,columna):
-    arriba=fila-1
-    abajo=fila+1
-    derecha=columna+1
-    izquierda=fila-1
-    percibir_arriba=entorno[arriba][columna]
-    percibir_abajo=entorno[abajo][columna]
-    percibir_derecha=entorno[derecha][columna]
-    percibir_izquierda=entorno[izquierda][columna]
-    print("Percepcion")
-    print("arriba:",percibir_arriba)
-    print("abajo:",percibir_abajo)
-    print("derecha:",percibir_derecha)
-    print("izquierda:",percibir_izquierda)
+def percibir(entorno):
+    posicion = buscar_agente(entorno)
+
+    fila, columna = posicion
+    num_filas = len(entorno)
+    num_columnas = len(entorno[0])
+
+    # Se evalúa cada dirección verificando los bordes de la matriz
+    percepcion = {
+        "agente_en": (fila, columna),
+        "arriba": entorno[fila - 1][columna] if fila > 0 else None,
+        "abajo": entorno[fila + 1][columna] if fila < num_filas - 1 else None,
+        "izquierda": entorno[fila][columna - 1] if columna > 0 else None,
+        "derecha": entorno[fila][columna + 1] if columna < num_columnas - 1 else None,
+    }
+
+    print(f"--- Percepción para el agente en posición ({fila}, {columna}) ---")
+    print("Arriba:   ", percepcion["arriba"])
+    print("Abajo:    ", percepcion["abajo"])
+    print("Izquierda:", percepcion["izquierda"])
+    print("Derecha:  ", percepcion["derecha"])
+
+    return percepcion
 
 
 #DECIDIR
@@ -57,7 +66,7 @@ def actualizar(evento):
 
 
 
-percibir(entorno2,3,3)
+percibir(entorno1)
 
 
 
