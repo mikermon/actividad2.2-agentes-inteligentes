@@ -1,12 +1,6 @@
-# ============================================
-# ACTIVIDAD 4: AGENTE RECOLECTOR
-# Agentes Inteligentes
-# ============================================
-
 # --------------------------------------------
 # VARIABLES DEL ENTORNO
 # --------------------------------------------
-
 entorno = []
 
 posicion_agente = [0, 0]
@@ -23,21 +17,32 @@ acciones_realizadas = 0
 # Máximo de acciones permitido por la actividad
 MAXIMO_ACCIONES = 50
 
+# Memoria del agente
+posiciones_visitadas = set()
+
+# Camino utilizado por el agente.
+# Se utiliza para regresar cuando llega
+# a un callejón sin salida.
+camino_agente = []
 
 # --------------------------------------------
 # FUNCIÓN PARA MOSTRAR EL ENTORNO
 # --------------------------------------------
-
 def mostrar_entorno():
+
     print("\nEstado actual del almacén:")
 
     for fila in range(len(entorno)):
+
         fila_mostrar = ""
 
         for columna in range(len(entorno[fila])):
 
+            # La posición del agente se muestra
+            # automáticamente.
             if [fila, columna] == posicion_agente:
                 fila_mostrar += "A "
+
             else:
                 fila_mostrar += entorno[fila][columna] + " "
 
@@ -48,11 +53,9 @@ def mostrar_entorno():
     print("Movimientos:", movimientos)
     print("Acciones:", acciones_realizadas)
 
-
 # --------------------------------------------
 # FUNCIÓN PERCIBIR
 # --------------------------------------------
-
 def percibir():
 
     fila = posicion_agente[0]
@@ -66,7 +69,6 @@ def percibir():
         "izquierda": None,
         "derecha": None
     }
-
     # Celda actual
     percepcion["actual"] = entorno[fila][columna]
 
@@ -95,24 +97,40 @@ def percibir():
         percepcion["derecha"] = entorno[fila][columna + 1]
 
     return percepcion
+# --------------------------------------------
+# FUNCIÓN PARA OBTENER POSICIÓN SEGÚN ACCIÓN
+# --------------------------------------------
+def obtener_nueva_posicion(accion):
 
+    fila = posicion_agente[0]
+    columna = posicion_agente[1]
 
+    if accion == "ARRIBA":
+        return fila - 1, columna
+
+    elif accion == "ABAJO":
+        return fila + 1, columna
+
+    elif accion == "IZQUIERDA":
+        return fila, columna - 1
+
+    elif accion == "DERECHA":
+        return fila, columna + 1
+
+    return fila, columna
 # --------------------------------------------
 # FUNCIÓN DECIDIR
 # --------------------------------------------
-
 def decidir(percepcion):
 
+    # ----------------------------------------
     # REGLA 1:
-    # Si la celda actual contiene un paquete,
-    # recogerlo.
+    # ----------------------------------------
     if percepcion["actual"] == "P":
         return "RECOGER"
-
+    # ----------------------------------------
     # REGLA 2:
-    # Buscar primero paquetes en las celdas
-    # adyacentes.
-
+    # ----------------------------------------
     if percepcion["arriba"] == "P":
         return "ARRIBA"
 
@@ -124,27 +142,59 @@ def decidir(percepcion):
 
     if percepcion["izquierda"] == "P":
         return "IZQUIERDA"
+    # ----------------------------------------
+    # REGLA 3:
+    # ----------------------------------------
+    direcciones = [
+        ("ARRIBA", percepcion["arriba"]),
+        ("DERECHA", percepcion["derecha"]),
+        ("ABAJO", percepcion["abajo"]),
+        ("IZQUIERDA", percepcion["izquierda"])
+    ]
 
-    # REGLA 3, 4 y 5:
-    # Si no hay paquetes cercanos,
-    # buscar una celda libre.
+    for direccion, contenido in direcciones:
 
-    if percepcion["derecha"] == ".":
-        return "DERECHA"
+        if contenido != ".":
+            continue
 
-    if percepcion["abajo"] == ".":
-        return "ABAJO"
+        nueva_fila, nueva_columna = obtener_nueva_posicion(direccion)
 
-    if percepcion["izquierda"] == ".":
-        return "IZQUIERDA"
+        nueva_posicion = (
+            nueva_fila,
+            nueva_columna
+        )
 
-    if percepcion["arriba"] == ".":
-        return "ARRIBA"
+        # Si todavía no visitamos esta posición,
+        # podemos explorarla.
+        if nueva_posicion not in posiciones_visitadas:
+            return direccion
+    # ----------------------------------------
+    # REGLA 5:
+    # ----------------------------------------
+    if camino_agente:
 
-    # REGLA 7:
-    # No existe una acción de movimiento válida.
-    return "ESPERAR"
+        posicion_anterior = camino_agente[-1]
 
+        fila_actual = posicion_agente[0]
+        columna_actual = posicion_agente[1]
+
+        fila_anterior = posicion_anterior[0]
+        columna_anterior = posicion_anterior[1]
+
+        diferencia_fila = fila_anterior - fila_actual
+        diferencia_columna = columna_anterior - columna_actual
+
+        if diferencia_fila == -1:
+            return "ARRIBA"
+
+        elif diferencia_fila == 1:
+            return "ABAJO"
+
+        elif diferencia_columna == -1:
+            return "IZQUIERDA"
+
+        elif diferencia_columna == 1:
+            return "DERECHA"
 
 # --------------------------------------------
 # FUNCIÓN ACTUAR
@@ -157,13 +207,13 @@ def actuar(accion):
     global movimientos
     global penalizaciones
     global acciones_realizadas
+    global camino_agente
 
     acciones_realizadas += 1
 
     # ----------------------------------------
     # ACCIÓN RECOGER
     # ----------------------------------------
-
     if accion == "RECOGER":
 
         if entorno[posicion_agente[0]][posicion_agente[1]] == "P":
@@ -176,17 +226,6 @@ def actuar(accion):
 
             print("\nACCIÓN: RECOGER")
             print("Paquete recogido. +10 puntos")
-
-        return
-
-    # ----------------------------------------
-    # ACCIÓN ESPERAR
-    # ----------------------------------------
-
-    if accion == "ESPERAR":
-
-        print("\nACCIÓN: ESPERAR")
-        print("No existe un movimiento disponible.")
 
         return
 
@@ -213,9 +252,8 @@ def actuar(accion):
         nueva_columna += 1
 
     # ----------------------------------------
-    # COMPROBAR LÍMITES
+    # COMPROBAR LÍMITES regla 4
     # ----------------------------------------
-
     if (
         nueva_fila < 0
         or nueva_fila >= len(entorno)
@@ -230,11 +268,9 @@ def actuar(accion):
         print("Movimiento fuera del tablero. -5 puntos")
 
         return
-
     # ----------------------------------------
-    # COMPROBAR OBSTÁCULO
+    # COMPROBAR OBSTÁCULO regla4
     # ----------------------------------------
-
     if entorno[nueva_fila][nueva_columna] == "X":
 
         puntuacion -= 5
@@ -244,6 +280,45 @@ def actuar(accion):
         print("Obstáculo encontrado. -5 puntos")
 
         return
+    # ----------------------------------------
+    # COMPROBAR SI ES RETROCESO
+    # ----------------------------------------
+
+    posicion_nueva = (
+        nueva_fila,
+        nueva_columna
+    )
+
+    es_retroceso = False
+
+    if camino_agente:
+
+        posicion_anterior = camino_agente[-1]
+
+        if posicion_nueva == posicion_anterior:
+            es_retroceso = True
+
+    # ----------------------------------------
+    # GUARDAR CAMINO
+    # ----------------------------------------
+
+    posicion_actual = (
+        posicion_agente[0],
+        posicion_agente[1]
+    )
+
+    if es_retroceso:
+
+        # Estamos regresando al punto anterior,
+        # por lo tanto quitamos la posición actual
+        # de la pila del camino.
+        camino_agente.pop()
+
+    else:
+
+        # Estamos explorando una posición nueva,
+        # así que guardamos de dónde venimos.
+        camino_agente.append(posicion_actual)
 
     # ----------------------------------------
     # REALIZAR MOVIMIENTO
@@ -256,14 +331,19 @@ def actuar(accion):
 
     puntuacion -= 1
 
-    print("\nACCIÓN:", accion)
-    print("Movimiento realizado. -1 punto")
+    # Registrar posición visitada
+    posiciones_visitadas.add(posicion_nueva)
 
+    print("\nACCIÓN:", accion)
+
+    if es_retroceso:
+        print("Retroceso realizado. -1 punto")
+    else:
+        print("Movimiento realizado. -1 punto")
 
 # --------------------------------------------
 # ACTUALIZAR RENDIMIENTO
 # --------------------------------------------
-
 def actualizar_rendimiento():
 
     global puntuacion
@@ -274,7 +354,6 @@ def actualizar_rendimiento():
 
         print("\n¡TODOS LOS PAQUETES FUERON RECOGIDOS!")
         print("+20 puntos adicionales")
-
 
 # --------------------------------------------
 # CONTAR PAQUETES
@@ -293,7 +372,6 @@ def contar_paquetes():
 
     return cantidad
 
-
 # --------------------------------------------
 # EJECUTAR ESCENARIO
 # --------------------------------------------
@@ -308,8 +386,11 @@ def ejecutar_escenario(mapa, posicion_inicial):
     global movimientos
     global penalizaciones
     global acciones_realizadas
-
-    # Reiniciar datos
+    global posiciones_visitadas
+    global camino_agente
+    # ----------------------------------------
+    # REINICIAR DATOS
+    # ----------------------------------------
     entorno = [fila[:] for fila in mapa]
 
     posicion_agente = posicion_inicial[:]
@@ -320,16 +401,30 @@ def ejecutar_escenario(mapa, posicion_inicial):
     penalizaciones = 0
     acciones_realizadas = 0
 
+    # Reiniciar memoria
+    posiciones_visitadas = set()
+
+    # Reiniciar camino
+    camino_agente = []
+
+    # Registrar posición inicial
+    posiciones_visitadas.add(
+        tuple(posicion_agente)
+    )
+
     paquetes_iniciales = contar_paquetes()
+
+    # ----------------------------------------
+    # MOSTRAR ESCENARIO
+    # ----------------------------------------
 
     print("\n============================================")
     print("INICIO DEL ESCENARIO")
     print("============================================")
 
     mostrar_entorno()
-
     # ----------------------------------------
-    # CICLO PRINCIPAL DEL AGENTE
+    # CICLO PRINCIPAL
     # ----------------------------------------
 
     while (
@@ -351,13 +446,12 @@ def ejecutar_escenario(mapa, posicion_inicial):
         # ACCIÓN
         actuar(accion)
 
-        # Mostrar entorno después de cada acción
+        # MOSTRAR ENTORNO
         mostrar_entorno()
 
     # ----------------------------------------
     # BONIFICACIÓN
     # ----------------------------------------
-
     if paquetes_recogidos == paquetes_iniciales:
 
         actualizar_rendimiento()
@@ -365,11 +459,9 @@ def ejecutar_escenario(mapa, posicion_inicial):
     # ----------------------------------------
     # RESULTADOS
     # ----------------------------------------
-
     print("\n============================================")
     print("RESULTADOS DEL ESCENARIO")
     print("============================================")
-
     print("Paquetes iniciales:", paquetes_iniciales)
     print("Paquetes recogidos:", paquetes_recogidos)
     print("Movimientos:", movimientos)
@@ -377,18 +469,9 @@ def ejecutar_escenario(mapa, posicion_inicial):
     print("Acciones realizadas:", acciones_realizadas)
     print("Puntuación final:", puntuacion)
 
-    return {
-        "paquetes": paquetes_recogidos,
-        "movimientos": movimientos,
-        "penalizaciones": penalizaciones,
-        "puntuacion": puntuacion
-    }
-
-
 # ============================================
-# ESCENARIO 1
+# ESCENARIOS
 # ============================================
-
 escenario_1 = [
     [".", ".", ".", "P", "."],
     [".", "X", ".", ".", "."],
@@ -396,88 +479,58 @@ escenario_1 = [
     [".", ".", "P", ".", "."],
     [".", "X", ".", ".", "."]
 ]
-
-resultado_1 = ejecutar_escenario(
-    escenario_1,
-    [2, 0]
-)
-
-
-# ============================================
-# ESCENARIO 2
-# ============================================
-
 escenario_2 = [
     ["P", ".", "X", ".", "."],
     [".", ".", "X", ".", "P"],
-    [".", ".", "A", ".", "."],
+    [".", ".", ".", ".", "."],
     ["X", ".", ".", ".", "."],
     ["P", ".", "X", ".", "."]
 ]
-
-resultado_2 = ejecutar_escenario(
-    escenario_2,
-    [2, 2]
-)
-
-
-# ============================================
-# ESCENARIO 3
-# ============================================
-
 escenario_3 = [
     [".", "X", ".", ".", "P"],
     [".", "X", ".", "X", "."],
-    [".", ".", "A", ".", "."],
+    [".", ".", ".", ".", "."],
     ["P", "X", ".", "X", "."],
     [".", ".", ".", ".", "P"]
 ]
 
-resultado_3 = ejecutar_escenario(
-    escenario_3,
-    [2, 2]
-)
-
-
 # ============================================
-# RESUMEN FINAL
+# SELECCIÓN DEL ESCENARIO
 # ============================================
-
-print("\n\n============================================")
-print("RESUMEN DE LOS TRES ESCENARIOS")
+print("\n============================================")
+print("       AGENTE RECOLECTOR")
 print("============================================")
+print("\nSelecciona el escenario que deseas ejecutar:")
+print("1. Escenario 1")
+print("2. Escenario 2")
+print("3. Escenario 3")
 
-print("\nEscenario | Paquetes | Movimientos | Penalizaciones | Puntuación")
+while True:
+    opcion = input("\nIngresa el número del escenario: ")
+    if opcion == "1":
+        print("\nHas seleccionado el ESCENARIO 1")
 
-print(
-    "1         |",
-    resultado_1["paquetes"],
-    "       |",
-    resultado_1["movimientos"],
-    "          |",
-    resultado_1["penalizaciones"],
-    "             |",
-    resultado_1["puntuacion"]
-)
+        ejecutar_escenario(
+            escenario_1,
+            [2, 0]
+        )
+        break
+    elif opcion == "2":
 
-print(
-    "2         |",
-    resultado_2["paquetes"],
-    "       |",
-    resultado_2["movimientos"],
-    "          |",
-    resultado_2["penalizaciones"],
-    "             |",
-    resultado_2["puntuacion"]
-)
+        print("\nHas seleccionado el ESCENARIO 2")
 
-print(
-    "3         |",
-    resultado_3["paquetes"],
-    "       |",
-    resultado_3["movimientos"],
-    "          |",
-    resultado_3["penalizaciones"],
-    "             |",
-    resultado_3["puntuacion"]
-)
+        ejecutar_escenario(
+            escenario_2,
+            [2, 2]
+        )
+        break
+    elif opcion == "3":
+        print("\nHas seleccionado el ESCENARIO 3")
+        ejecutar_escenario(
+            escenario_3,
+            [2, 2]
+        )
+        break
+    else:
+        print("Opción no válida.")
+        print("Selecciona 1, 2 o 3.")
